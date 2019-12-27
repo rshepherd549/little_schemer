@@ -1,23 +1,71 @@
-fn is_character(c: &char) -> bool {
-    c.is_ascii_graphic()
- && *c != '('
+#[derive(Debug)]
+#[derive(PartialEq)]
+enum Token {
+    OpenBracket,
+    CloseBracket,
+    Atom(String),
 }
 
+fn to_tokens(text: &str) -> Vec<Token> {
 
-fn is_atom(text: &str) -> bool {
-    if text.is_empty() {
-      return false;
-    }
+    let mut tokens = Vec::<Token>::new();
+    let mut atom = String::new();
 
-    let chars = text.chars();
+    for c in text.chars() {
+        if !atom.is_empty()
+          && ( c == '(' 
+            || c == ')'
+            || !c.is_ascii_graphic()) {
+            tokens.push(Token::Atom(atom.clone()));
+            atom.clear();
+        }
 
-    for c in chars {
-        if !is_character(&c) {
-            return false;
+        if c == '(' {
+            tokens.push(Token::OpenBracket);
+        }
+        else if c == ')' {
+            tokens.push(Token::CloseBracket);
+        }
+        else if c.is_ascii_graphic() {
+            atom.push(c);
         }
     }
 
-    true
+    if !atom.is_empty() {
+        tokens.push(Token::Atom(atom.clone()));
+    }
+
+    tokens
+}
+
+#[test]
+fn test_to_tokens() {
+    {
+        let tokens = to_tokens("");
+        assert_eq!(tokens.len(), 0);
+    }
+
+    {
+        let tokens = to_tokens("a");
+        assert_eq!(tokens.len(), 1);
+
+        assert!(match &tokens[0] {
+            Token::Atom(text) => text == "a",
+            _ => false
+          });
+
+        assert_eq!(tokens, vec!(Token::Atom("a".to_string())));
+    }
+}
+
+fn is_atom(text: &str) -> bool {
+    let tokens = to_tokens(text);
+
+    tokens.len() == 1 &&
+    match &tokens[0] {
+        Token::Atom(_) => true,
+        _ => false
+    }
 }
 
 #[test]
@@ -30,9 +78,9 @@ fn test_is_atom() {
     assert_eq!(is_atom(""), false);
     assert_eq!(is_atom(" "), false);
     assert_eq!(is_atom("a"), true);
-    assert_eq!(is_atom(" a"), false);
-    assert_eq!(is_atom("a "), false);
-    assert_eq!(is_atom(" a "), false);
+    assert_eq!(is_atom(" a"), true); //allow whitespace
+    assert_eq!(is_atom("a "), true); //allow whitespace
+    assert_eq!(is_atom(" a "), true); //allow whitespace
     assert_eq!(is_atom("("), false);
     assert_eq!(is_atom("(abc$"), false);
     assert_eq!(is_atom("(abc$)"), false);
@@ -40,31 +88,35 @@ fn test_is_atom() {
 
 fn is_list(text: &str) -> bool {
 
-    let mut found_open_bracket = false;
-    let mut found_close_bracket = false;
+    let tokens = to_tokens(text);
+
+    let mut depth = 0;
+    let mut max_depth = 0;
     
-    for c in text.chars() {
-        if !found_open_bracket {
-            if c == '(' {
-                found_open_bracket = true;
-            }
-            else if c.is_ascii_graphic() {
-                return false; //atom before open_bracket
-            }
-        }
-        else if !found_close_bracket {
-            if c == ')' {
-                found_close_bracket = true;
-            }
-        }
-        else {
-            if c.is_ascii_graphic() {
-                return false; //atom after close_bracket
+    for token in tokens {
+        match token {
+            Token::OpenBracket => {
+                depth += 1;
+                if depth > max_depth {
+                    max_depth = depth;
+                }
+            },
+            Token::CloseBracket => {
+                depth -= 1;
+                if depth < 0 {
+                    return false;
+                }
+            },
+            Token::Atom(_) => {
+                //Check that atom isn't found outside outermost list
+                if depth <= 0 {
+                    return false;
+                }
             }
         }
     }
 
-    found_close_bracket
+    depth == 0 && max_depth > 0
 }
 
 #[test]
@@ -74,8 +126,10 @@ fn test_is_list() {
     assert_eq!(is_list("()"), true);
     assert_eq!(is_list("(atom"), false);
     assert_eq!(is_list("(atom turkey or)"), true);
+    assert_eq!(is_list("(atom (turkey (pitch black))or ())"), true);
     assert_eq!(is_list("  (  atom    turkey  or )  "), true);
     assert_eq!(is_list("(atom turkey) or"), false);
+    assert_eq!(is_list("((atom turkey) or)"), true);
 }
 
 /// sexpression
@@ -88,9 +142,9 @@ fn test_is_sexp()
 {
     assert_eq!(is_sexp(""), false);
     assert_eq!(is_sexp(" "), false);
-    assert_eq!(is_sexp("atom"), true);
-    assert_eq!(is_sexp("(atom)"), true);
-    assert_eq!(is_sexp("(atom) atom"), false);
+    assert_eq!(is_sexp("xyz"), true);
+    assert_eq!(is_sexp("(x y z)"), true);
+    assert_eq!(is_sexp("(x y) z"), false);
     assert_eq!(is_sexp("atom atom"), false);
 }
 

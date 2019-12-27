@@ -8,13 +8,13 @@ To force myself to read, consider and answer the questions, I decided to increme
 
 Writing the parser in Rust would provide an opportunity to learn Rust from scratch. It would also give me an excuse to initially write very crude parsers in rudimentary Rust, and then rewrite more sophisticated parsers as my knowledge of Rust syntax and techniques increased.
 
-## Create little_schemer project
+# Create little_schemer project
 
 - Start with command line
 - Use Rust standard naming:
   - Use lower camel case names, apart from upper case for Types.
 - VisualStudioCode
-  - Configure building and running tests
+  - Configure building and running tests. Sometimes outputs usefully to Terminal and sometimes doesn't.
 
 ## Is a string an atom
 
@@ -42,6 +42,11 @@ fn is_atom(text: &str) -> bool {
 ## Is string a list
 
 Crude state machine: loop over chars with mutable flags
+
+# Replace with Lexer
+
+- Better tool for analyzing the atoms and lists.
+- Still using mutable state
 
 
 
