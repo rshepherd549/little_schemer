@@ -10,6 +10,38 @@ Writing the parser in Rust would provide an opportunity to learn Rust from scrat
 
 ## Create little_schemer project
 
-Use Rust standard naming:
-- Use lower camel case names, apart from upper case for Types.
+- Start with command line
+- Use Rust standard naming:
+  - Use lower camel case names, apart from upper case for Types.
+- VisualStudioCode
+  - Configure building and running tests
+
+## Is a string an atom
+
+- Difference between String and str
+- Iterate over a collection
+- Need to dereference references to use as value (e.g. for comparisons) but not for calling methods (but can; syntactic sugar)
+- Experimented with minimizing `return`. Doesn't seem to like the last line of a general block returning a value, or returning the value of a block as an expression e.g. to simplify `is_atom` to a functional expression e.g.
+
+```rust
+fn is_atom(text: &str) -> bool {
+    !text.is_empty()
+    &&
+    {
+        for c in text.chars() {
+            if !is_character(&c) {
+                false;
+            }
+        }
+
+        true
+    }
+}
+```
+
+## Is string a list
+
+Crude state machine: loop over chars with mutable flags
+
+
 
