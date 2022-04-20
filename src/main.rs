@@ -58,9 +58,7 @@ fn test_to_tokens() {
     }
 }
 
-fn is_atom(text: &str) -> bool {
-    let tokens = to_tokens(text);
-
+fn is_atom(tokens: &Vec<Token>) -> bool {
     tokens.len() == 1 &&
     match &tokens[0] {
         Token::Atom(_) => true,
@@ -70,25 +68,23 @@ fn is_atom(text: &str) -> bool {
 
 #[test]
 fn test_is_atom() {
-    assert_eq!(is_atom("atom"), true);
-    assert_eq!(is_atom("turkey"), true);
-    assert_eq!(is_atom("1492"), true);
-    assert_eq!(is_atom("u"), true);
-    assert_eq!(is_atom("*abc$"), true);
-    assert_eq!(is_atom(""), false);
-    assert_eq!(is_atom(" "), false);
-    assert_eq!(is_atom("a"), true);
-    assert_eq!(is_atom(" a"), true); //allow whitespace
-    assert_eq!(is_atom("a "), true); //allow whitespace
-    assert_eq!(is_atom(" a "), true); //allow whitespace
-    assert_eq!(is_atom("("), false);
-    assert_eq!(is_atom("(abc$"), false);
-    assert_eq!(is_atom("(abc$)"), false);
+    assert_eq!(is_atom(&to_tokens("atom")), true);
+    assert_eq!(is_atom(&to_tokens("turkey")), true);
+    assert_eq!(is_atom(&to_tokens("1492")), true);
+    assert_eq!(is_atom(&to_tokens("u")), true);
+    assert_eq!(is_atom(&to_tokens("*abc$")), true);
+    assert_eq!(is_atom(&to_tokens("")), false);
+    assert_eq!(is_atom(&to_tokens(" ")), false);
+    assert_eq!(is_atom(&to_tokens("a")), true);
+    assert_eq!(is_atom(&to_tokens(" a")), true); //allow whitespace
+    assert_eq!(is_atom(&to_tokens("a ")), true); //allow whitespace
+    assert_eq!(is_atom(&to_tokens(" a ")), true); //allow whitespace
+    assert_eq!(is_atom(&to_tokens("(")), false);
+    assert_eq!(is_atom(&to_tokens("(abc$")), false);
+    assert_eq!(is_atom(&to_tokens("(abc$)")), false);
 }
 
-fn is_list(text: &str) -> bool {
-
-    let tokens = to_tokens(text);
+fn is_list(tokens: &Vec<Token>) -> bool {
 
     let mut depth = 0;
     let mut max_depth = 0;
@@ -121,31 +117,31 @@ fn is_list(text: &str) -> bool {
 
 #[test]
 fn test_is_list() {
-    assert_eq!(is_list("atom"), false);
-    assert_eq!(is_list("(atom)"), true);
-    assert_eq!(is_list("()"), true);
-    assert_eq!(is_list("(atom"), false);
-    assert_eq!(is_list("(atom turkey or)"), true);
-    assert_eq!(is_list("(atom (turkey (pitch black))or ())"), true);
-    assert_eq!(is_list("  (  atom    turkey  or )  "), true);
-    assert_eq!(is_list("(atom turkey) or"), false);
-    assert_eq!(is_list("((atom turkey) or)"), true);
+    assert_eq!(is_list(&to_tokens("atom")), false);
+    assert_eq!(is_list(&to_tokens("(atom)")), true);
+    assert_eq!(is_list(&to_tokens("()")), true);
+    assert_eq!(is_list(&to_tokens("(atom")), false);
+    assert_eq!(is_list(&to_tokens("(atom turkey or)")), true);
+    assert_eq!(is_list(&to_tokens("(atom (turkey (pitch black))or ())")), true);
+    assert_eq!(is_list(&to_tokens("  (  atom    turkey  or )  ")), true);
+    assert_eq!(is_list(&to_tokens("(atom turkey) or")), false);
+    assert_eq!(is_list(&to_tokens("((atom turkey) or)")), true);
 }
 
-/// sexpression
-fn is_sexp(text: &str) -> bool {
-    is_atom(text) || is_list(text)
+/// s_expression
+fn is_s_exp(tokens: &Vec<Token>) -> bool {
+    is_atom(tokens) || is_list(tokens)
 }
 
 #[test]
-fn test_is_sexp()
+fn test_is_s_exp()
 {
-    assert_eq!(is_sexp(""), false);
-    assert_eq!(is_sexp(" "), false);
-    assert_eq!(is_sexp("xyz"), true);
-    assert_eq!(is_sexp("(x y z)"), true);
-    assert_eq!(is_sexp("(x y) z"), false);
-    assert_eq!(is_sexp("atom atom"), false);
+    assert_eq!(is_s_exp(&to_tokens("")), false);
+    assert_eq!(is_s_exp(&to_tokens(" ")), false);
+    assert_eq!(is_s_exp(&to_tokens("xyz")), true);
+    assert_eq!(is_s_exp(&to_tokens("(x y z)")), true);
+    assert_eq!(is_s_exp(&to_tokens("(x y) z")), false);
+    assert_eq!(is_s_exp(&to_tokens("atom atom")), false);
 }
 
 fn main() {
