@@ -66,22 +66,24 @@ fn is_atom(tokens: &Vec<Token>) -> bool {
     }
 }
 
-#[test]
-fn test_is_atom() {
-    assert_eq!(is_atom(&to_tokens("atom")), true);
-    assert_eq!(is_atom(&to_tokens("turkey")), true);
-    assert_eq!(is_atom(&to_tokens("1492")), true);
-    assert_eq!(is_atom(&to_tokens("u")), true);
-    assert_eq!(is_atom(&to_tokens("*abc$")), true);
-    assert_eq!(is_atom(&to_tokens("")), false);
-    assert_eq!(is_atom(&to_tokens(" ")), false);
-    assert_eq!(is_atom(&to_tokens("a")), true);
-    assert_eq!(is_atom(&to_tokens(" a")), true); //allow whitespace
-    assert_eq!(is_atom(&to_tokens("a ")), true); //allow whitespace
-    assert_eq!(is_atom(&to_tokens(" a ")), true); //allow whitespace
-    assert_eq!(is_atom(&to_tokens("(")), false);
-    assert_eq!(is_atom(&to_tokens("(abc$")), false);
-    assert_eq!(is_atom(&to_tokens("(abc$)")), false);
+use test_case::test_case;
+
+#[test_case("atom", true; "is_atom: simple word")]
+#[test_case("turkey", true; "is_atom: simple word 2")]
+#[test_case("1492", true; "is_atom: number")]
+#[test_case("u", true; "is_atom: single letter")]
+#[test_case("*abc$", true; "is_atom: include $")]
+#[test_case("", false; "is_atom: empty string")]
+#[test_case(" ", false; "is_atom: whitespace")]
+#[test_case(" a", true; "is_atom: whitespace before")]
+#[test_case("a ", true; "is_atom: whitespace after")]
+#[test_case(" a ", true; "is_atom: whitespace before and after")]
+#[test_case("(", false; "is_atom: left bracket")]
+#[test_case("(abc$", false; "is_atom: left bracket and atom")]
+#[test_case("(abc$)", false; "is_atom: bracketed atom")]
+fn test_is_atom(s: &str, expected: bool) {
+    let tokens = to_tokens(s);
+    assert_eq!(is_atom(&tokens), expected);
 }
 
 fn is_list(tokens: &Vec<Token>) -> bool {
@@ -115,17 +117,17 @@ fn is_list(tokens: &Vec<Token>) -> bool {
     depth == 0 && max_depth > 0
 }
 
-#[test]
-fn test_is_list() {
-    assert_eq!(is_list(&to_tokens("atom")), false);
-    assert_eq!(is_list(&to_tokens("(atom)")), true);
-    assert_eq!(is_list(&to_tokens("()")), true);
-    assert_eq!(is_list(&to_tokens("(atom")), false);
-    assert_eq!(is_list(&to_tokens("(atom turkey or)")), true);
-    assert_eq!(is_list(&to_tokens("(atom (turkey (pitch black))or ())")), true);
-    assert_eq!(is_list(&to_tokens("  (  atom    turkey  or )  ")), true);
-    assert_eq!(is_list(&to_tokens("(atom turkey) or")), false);
-    assert_eq!(is_list(&to_tokens("((atom turkey) or)")), true);
+#[test_case("atom", false; "is_list: atom")]
+#[test_case("(atom)", true; "is_list: one atom list")]
+#[test_case("()", true; "is_list: empty list")]
+#[test_case("(atom", false; "is_list: unclosed list")]
+#[test_case("(atom turkey or)", true; "is_list: list of 3 atoms")]
+#[test_case("(atom (turkey (pitch black))or ())", true; "is_list: nested list")]
+#[test_case("  (  atom    turkey  or )  ", true; "is_list: spaced out list")]
+#[test_case("(atom turkey) or", false; "is_list: list and atom")]
+#[test_case("((atom turkey) or)", true; "is_list: list of list and atom")]
+fn test_is_list(s: &str, expected: bool) {
+    assert_eq!(is_list(&to_tokens(s)), expected);
 }
 
 /// s_expression
