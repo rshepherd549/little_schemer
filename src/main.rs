@@ -305,6 +305,17 @@ fn cdr(sexp: &SExpression) -> Option<SExpression> {
     }
 }
 
+fn cons(atom: &SExpression, list: &SExpression) -> Option<SExpression> {
+    match list {
+        SExpression::List(list) => {
+            let mut list = list.clone();
+            list.insert(0, atom.clone());
+            Some(SExpression::List(list))
+        },
+        _ => None,
+    }
+}
+
 #[test]
 fn test_car() {
     {
@@ -363,36 +374,25 @@ fn test_car() {
     }
 }
 
-fn eval(sexp: &SExpression) -> Option<SExpression> {
-    fn eval_list(list: &Vec<SExpression>) -> Option<SExpression> {
-        let mut new_list : Vec<SExpression> = Vec::new();
-        let mut current = list.iter();
-        while let Some(sexp) = current.next() {
-          match sexp {
-              SExpression::Atom(a) if a == "car" =>
-                  return match current.next() {
-                      Some(sexp) => match eval(sexp) {
-                          Some(sexp) => Some(car(&sexp)?), 
-                          _ => None,
-                      },
-                      _ => None,
-                  },
-                  SExpression::Atom(a) if a == "cdr" =>
-                  return match current.next() {
-                      Some(sexp) => match eval(sexp) {
-                          Some(sexp) => Some(cdr(&sexp)?), 
-                          _ => None,
-                      },
-                      _ => None,
-                  },
-              _ => new_list.push(sexp.clone()),
-          }
+impl SExpression {
+    fn eval(&self) -> Option<SExpression> {
+        fn eval_list(list: &Vec<SExpression>) -> Option<SExpression> {
+            let mut new_list : Vec<SExpression> = Vec::new();
+            let mut current = list.iter();
+            while let Some(sexp) = current.next() {
+              match sexp {
+                  SExpression::Atom(a) if a == "car" => return car(&current.next()?.eval()?),
+                  SExpression::Atom(a) if a == "cdr" => return cdr(&current.next()?.eval()?),
+                  SExpression::Atom(a) if a == "cons" => return cons(&current.next()?.eval()?, &current.next()?.eval()?),
+                  _ => new_list.push(sexp.clone()),
+              }
+            }
+            Some(SExpression::List(new_list))
         }
-        Some(SExpression::List(new_list))
-    }
-    match sexp {
-        SExpression::List(list) => eval_list(&list),
-        SExpression::Atom(s) => Some(SExpression::Atom(s.to_string())),
+        match &*self {
+            SExpression::List(list) => eval_list(&list),
+            SExpression::Atom(s) => Some(SExpression::Atom(s.to_string())),
+        }
     }
 }
 
@@ -402,7 +402,7 @@ fn test_eval_car() {
         let tokens = to_tokens("(car (a b c))");
         let sexp = to_sexpression(&tokens);
         match sexp {
-            Some(sexp) => match eval(&sexp) {
+            Some(sexp) => match sexp.eval() {
                 Some(SExpression::Atom(s)) => assert_eq!(s, "a"),
                 _ => assert!(false),
             },
@@ -413,7 +413,7 @@ fn test_eval_car() {
         let tokens = to_tokens("(car a)");
         let sexp = to_sexpression(&tokens);
         match sexp {
-            Some(sexp) => assert!(match eval(&sexp) {
+            Some(sexp) => assert!(match sexp.eval() {
                 None => true,
                 _ => false,
             }),
@@ -445,7 +445,7 @@ fn sexpression_to_string(sexp: &SExpression) -> String {
 fn eval_scheme_to_string(s: &str) -> String {
     let tokens = to_tokens(s);
     match to_sexpression(&tokens) {
-        Some(sexp) => match eval(&sexp) {
+        Some(sexp) => match sexp.eval() {
             Some(sexp) => sexpression_to_string(&sexp),
             _ => String::from("Bad eval!"),
         },
@@ -473,6 +473,7 @@ fn eval_scheme_to_string(s: &str) -> String {
 #[test_case("(car (cdr ((b) (x y) ((c))) ))", "(x y)"; "eval: car cdr")]
 #[test_case("(cdr (cdr ((b) (x y) ((c))) ))", "(((c)))"; "eval: cdr cdr")]
 #[test_case("(cdr (car ((b) (x y) ((c))) ))", "()"; "eval: cdr car")]
+#[test_case("(cons peanut (butter and jelly))", "(peanut butter and jelly)"; "eval: cons")]
 fn test_eval_scheme_to_string(s: &str, expected: &str) {
     assert_eq!(eval_scheme_to_string(&s), expected);
 }
