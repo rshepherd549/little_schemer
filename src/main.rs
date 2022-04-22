@@ -58,6 +58,149 @@ fn test_to_tokens() {
     }
 }
 
+enum SExpression {
+    Atom(String),
+    List(Vec<Box<SExpression>>)
+}
+
+fn to_sexpression(tokens: &[Token]) -> Option<SExpression> {
+
+    fn to_list(tokens: &[Token], begin_token: usize) -> Option<(SExpression, usize)> {
+        let mut list: Vec<Box<SExpression>> = Vec::new();
+      
+        let mut curr_token = begin_token;
+        while curr_token != tokens.len() {
+            let (sexp, next_token) = match &tokens[curr_token] {
+              Token::Atom(s) => (SExpression::Atom(s.to_string()), curr_token+1),
+              Token::OpenBracket => match to_list(tokens, curr_token+1) {
+                  Some(list) => list,
+                  _ => break,
+              },
+              Token::CloseBracket => return Some((SExpression::List(list), curr_token+1)),
+            };
+            list.push(Box::new(sexp));
+            curr_token = next_token;
+        }
+        return None; //Didn't find matching CloseBracket
+      }
+      
+    if tokens.is_empty() {
+        return None
+    }
+
+    let curr_token = 0;
+    let (sexp, next_token) = match &tokens[curr_token] {
+        Token::OpenBracket => match to_list(tokens, curr_token+1) {
+            Some(sexp_next_token) => sexp_next_token,
+            _ => return None,
+        },
+        Token::CloseBracket => return None,
+        Token::Atom(s) => (SExpression::Atom(s.to_string()), curr_token+1),
+    };
+    if next_token != tokens.len() {
+        return None; //More than one sexpression when either list or atom expected
+    }
+    Some(sexp)
+}
+
+#[test]
+fn test_to_sexpression() {
+    {
+        let tokens = to_tokens("");
+        let sexp = to_sexpression(&tokens);
+        assert!(match sexp {
+            None => true,
+            _ => false
+          });
+    }
+    {
+        let tokens = to_tokens("()");
+        let sexp = to_sexpression(&tokens);
+        assert!(match sexp {
+            Some(SExpression::List(list)) => (list.len() == 0),
+            _ => false
+          });
+    }
+    {
+        let tokens = to_tokens("a");
+        let sexp = to_sexpression(&tokens);
+        assert!(match sexp {
+            Some(SExpression::Atom(s)) => s == "a",
+            _ => false
+          });
+    }
+    {
+        let tokens = to_tokens("(atom turkey) or");
+        let sexp = to_sexpression(&tokens);
+        assert!(match sexp {
+            None => true,
+            _ => false
+          });
+    }
+    {
+        let tokens = to_tokens("((atom turkey third) or)");
+        let sexp = to_sexpression(&tokens);
+
+        match sexp {
+            Some(SExpression::List(list)) => {
+                assert!(list.len() == 2);
+                match &*list[0] {
+                    SExpression::List(list2) => {
+                        assert!(list2.len() == 3);
+                        assert!(match &*list2[0] {
+                            SExpression::Atom(s) => (s == "atom"),
+                            _ => false,
+                        });
+                        assert!(match &*list2[1] {
+                            SExpression::Atom(s) => (s == "turkey"),
+                            _ => false,
+                        });
+                        assert!(match &*list2[2] {
+                            SExpression::Atom(s) => (s == "third"),
+                            _ => false,
+                        });
+                    },
+                    _ => assert!(false),
+                }
+                assert!(match &*list[1] {
+                    SExpression::Atom(s) => (s == "or"),
+                    _ => false,
+                });
+            },
+            _ => assert!(false),
+          }
+    }
+    {
+        let tokens = to_tokens("(how are you doing so far)");
+        let sexp = to_sexpression(&tokens);
+
+        assert!(match sexp {
+            Some(SExpression::List(list)) => (list.len() == 6),
+            _ => false,
+        });
+    }
+    {
+        let tokens = to_tokens("(((how) are)((you)(doing so))far)");
+        let sexp = to_sexpression(&tokens);
+
+        assert!(match sexp {
+            Some(SExpression::List(_)) => true,
+            _ => false,
+        });
+
+        assert!(if let Some(SExpression::List(_)) = sexp {
+                true
+            } else {
+                false
+        });
+
+        assert!(match sexp {
+            Some(SExpression::List(list)) => (list.len() == 3),
+            _ => false,
+        });
+    }
+}
+
 fn is_atom(tokens: &Vec<Token>) -> bool {
     tokens.len() == 1 &&
     match &tokens[0] {
