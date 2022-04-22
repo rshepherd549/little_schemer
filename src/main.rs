@@ -65,42 +65,43 @@ enum SExpression {
 
 fn to_sexpression(tokens: &[Token]) -> Option<SExpression> {
 
-    fn to_list(tokens: &[Token], begin_token: usize) -> Option<(SExpression, usize)> {
+    fn to_list(begin: std::slice::Iter<Token>) -> Option<(SExpression, std::slice::Iter<Token>)> {
         let mut list: Vec<Box<SExpression>> = Vec::new();
-      
-        let mut curr_token = begin_token;
-        while curr_token != tokens.len() {
-            let (sexp, next_token) = match &tokens[curr_token] {
-              Token::Atom(s) => (SExpression::Atom(s.to_string()), curr_token+1),
-              Token::OpenBracket => match to_list(tokens, curr_token+1) {
+        let mut current = begin;
+        loop {
+            let (sexp, next) = match current.next() {
+              Some(Token::Atom(s)) => (SExpression::Atom(s.to_string()), current),
+              Some(Token::OpenBracket) => match to_list(current) {
                   Some(list) => list,
-                  _ => break,
+                  _ => break, //Bad inner list
               },
-              Token::CloseBracket => return Some((SExpression::List(list), curr_token+1)),
+              Some(Token::CloseBracket) => return Some((SExpression::List(list), current)),
+              None => break, //Ran out of tokens before finding matching CloseBracket
             };
             list.push(Box::new(sexp));
-            curr_token = next_token;
+            current = next;
         }
-        return None; //Didn't find matching CloseBracket
+        return None;
       }
       
     if tokens.is_empty() {
         return None
     }
 
-    let curr_token = 0;
-    let (sexp, next_token) = match &tokens[curr_token] {
-        Token::OpenBracket => match to_list(tokens, curr_token+1) {
-            Some(sexp_next_token) => sexp_next_token,
+    let mut current = tokens.iter();
+    let (sexp, mut next) = match current.next() {
+        Some(Token::OpenBracket) => match to_list(current) {
+            Some(sexp_next) => sexp_next,
             _ => return None,
         },
-        Token::CloseBracket => return None,
-        Token::Atom(s) => (SExpression::Atom(s.to_string()), curr_token+1),
+        Some(Token::CloseBracket) => return None,
+        Some(Token::Atom(s)) => (SExpression::Atom(s.to_string()), current),
+        None => return None,
     };
-    if next_token != tokens.len() {
-        return None; //More than one sexpression when either list or atom expected
+    match next.next() {
+        Some(_) => return None, //More than one sexpression when either list or atom expected
+        _ => Some(sexp),
     }
-    Some(sexp)
 }
 
 #[test]
