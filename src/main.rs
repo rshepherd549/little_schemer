@@ -364,7 +364,10 @@ fn eval(sexp: &SExpression) -> Option<SExpression> {
           match sexp {
               SExpression::Atom(a) if a == "car" =>
                   return match current.next() {
-                      Some(sexp) => Some(car(&sexp)?.clone()),
+                      Some(sexp) => match eval(sexp) {
+                          Some(sexp) => Some(car(&sexp)?.clone()), 
+                          _ => None,
+                      },
                       _ => None,
                   },
               _ => new_list.push(sexp.clone()),
@@ -443,7 +446,8 @@ fn eval_scheme_to_string(s: &str) -> String {
 #[test_case("(car (hotdogs))", "hotdogs"; "eval: car")]
 #[test_case("(car ((hotdogs)))", "(hotdogs)"; "eval: car hotdogs nested")]
 #[test_case("(car (((hotdogs))))", "((hotdogs))"; "eval: car hotdogs more nested")]
-#[test_case("(car ( ((hotdogs)) (and) (pickle) relish ) )", "((hotdogs))"; "eval: car nested")]
+#[test_case("(car ( ((hotdogs)) (and) (pickle) relish ) )", "((hotdogs))"; "eval: car nested list")]
+#[test_case("(car (car ( ((hotdogs)) (and) (pickle) relish ) ) )", "(hotdogs)"; "eval: nested car")]
 fn test_eval_scheme_to_string(s: &str, expected: &str) {
     assert_eq!(eval_scheme_to_string(&s), expected);
 }
