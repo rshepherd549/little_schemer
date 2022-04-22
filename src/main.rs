@@ -145,10 +145,10 @@ fn test_to_sexpression() {
 
         match sexp {
             Some(SExpression::List(list)) => {
-                assert!(list.len() == 2);
+                assert_eq!(list.len(), 2);
                 match &list[0] {
                     SExpression::List(list2) => {
-                        assert!(list2.len() == 3);
+                        assert_eq!(list2.len(), 3);
                         assert!(match &list2[0] {
                             SExpression::Atom(s) => (s == "atom"),
                             _ => false,
@@ -330,7 +330,7 @@ fn test_car() {
         match sexp {
             Some(sexp) =>
                 match car(&sexp) {
-                    Some(SExpression::Atom(s)) => assert!(s == "a"),
+                    Some(SExpression::Atom(s)) => assert_eq!(s,"a"),
                     _ => assert!(false),
                 },
             _ => assert!(false),
@@ -343,9 +343,9 @@ fn test_car() {
             Some(sexp) =>
                 match car(&sexp) {
                     Some(SExpression::List(list)) => {
-                        assert!(list.len() == 3);
+                        assert_eq!(list.len(), 3);
                         match &list[2] {
-                            SExpression::Atom(s) => assert!(s == "c"),
+                            SExpression::Atom(s) => assert_eq!(s, "c"),
                             _ => assert!(false),
                         }
                     },
@@ -390,22 +390,67 @@ fn test_eval_car() {
         let tokens = to_tokens("(car (a b c))");
         let sexp = to_sexpression(&tokens);
         match sexp {
-            Some(sexp) => {
-                let eval_sexp = eval(&sexp);
-                match eval_sexp {
-                    Some(SExpression::List(list)) => {
-                        assert!(list.len() == 1);
-                        match &list[0] {
-                            SExpression::Atom(s) => assert!(s == "a"),
-                            _ => assert!(false),
-                        }
-                    },
-                    _ => assert!(false),
-                }
+            Some(sexp) => match eval(&sexp) {
+                Some(SExpression::List(list)) => {
+                    assert_eq!(list.len(), 1);
+                    match &list[0] {
+                        SExpression::Atom(s) => assert_eq!(s, "a"),
+                        _ => assert!(false),
+                    }
+                },
+                _ => assert!(false),
             },
             _ => assert!(false),
         }
     }
+    {
+        let tokens = to_tokens("(car a)");
+        let sexp = to_sexpression(&tokens);
+        match sexp {
+            Some(sexp) => assert!(match eval(&sexp) {
+                None => true,
+                _ => false,
+            }),
+            _ => assert!(false),
+        }
+    }
+}
+
+fn sexpression_to_string(sexp: &SExpression) -> String {
+    let mut s = String::new();
+    match sexp {
+        SExpression::Atom(s_) => s += s_,
+        SExpression::List(list) => {
+            s += "(";
+            let mut current = list.iter();
+            if let Some(sexp) = current.next() {
+                s += &sexpression_to_string(sexp);
+                while let Some(sexp) = current.next() {
+                    s += " ";
+                    s += &sexpression_to_string(sexp);
+                }
+            }
+            s += ")";
+        }
+    }
+    s
+}
+
+fn eval_scheme_to_string(s: &str) -> String {
+    let tokens = to_tokens(s);
+    match to_sexpression(&tokens) {
+        Some(sexp) => sexpression_to_string(&sexp),
+        _ if s == "" => String::new(),
+        _ => String::from("Error!"),
+    }
+}
+
+#[test_case("", ""; "eval: empty")]
+#[test_case("a", "a"; "eval: atom")]
+#[test_case("()", "()"; "eval: empty list")]
+#[test_case(" ( ( a  b )   c ) ", "((a b) c)"; "eval: list with whitespace")]
+fn test_eval_scheme_to_string(s: &str, expected: &str) {
+    assert_eq!(eval_scheme_to_string(&s), expected);
 }
 
 fn main() {
