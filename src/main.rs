@@ -473,6 +473,8 @@ fn eval_scheme_to_string(s: &str) -> String {
 #[test_case("(car (cdr ((b) (x y) ((c))) ))", "(x y)"; "eval: car cdr")]
 #[test_case("(cdr (cdr ((b) (x y) ((c))) ))", "(((c)))"; "eval: cdr cdr")]
 #[test_case("(cdr (car ((b) (x y) ((c))) ))", "()"; "eval: cdr car")]
+#[test_case("(cons peanut ())", "(peanut)"; "eval: cons into empty list")]
+#[test_case("(cons () ())", "(())"; "eval: cons empty list into empty list")]
 #[test_case("(cons peanut (butter and jelly))", "(peanut butter and jelly)"; "eval: cons")]
 fn test_eval_scheme_to_string(s: &str, expected: &str) {
     assert_eq!(eval_scheme_to_string(&s), expected);
