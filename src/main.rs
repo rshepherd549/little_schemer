@@ -291,9 +291,16 @@ fn test_is_s_exp()
     assert_eq!(is_s_exp(&to_tokens("atom atom")), false);
 }
 
-fn car(sexp: &SExpression) -> Option<&SExpression> {
+fn car(sexp: &SExpression) -> Option<SExpression> {
     match sexp {
-        SExpression::List(list) if !list.is_empty() => Some(&list[0]),
+        SExpression::List(list) if !list.is_empty() => Some(list[0].clone()),
+        _ => None,
+    }
+}
+
+fn cdr(sexp: &SExpression) -> Option<SExpression> {
+    match sexp {
+        SExpression::List(list) if !list.is_empty() => Some(SExpression::List(list[1..].to_vec())),
         _ => None,
     }
 }
@@ -365,7 +372,15 @@ fn eval(sexp: &SExpression) -> Option<SExpression> {
               SExpression::Atom(a) if a == "car" =>
                   return match current.next() {
                       Some(sexp) => match eval(sexp) {
-                          Some(sexp) => Some(car(&sexp)?.clone()), 
+                          Some(sexp) => Some(car(&sexp)?), 
+                          _ => None,
+                      },
+                      _ => None,
+                  },
+                  SExpression::Atom(a) if a == "cdr" =>
+                  return match current.next() {
+                      Some(sexp) => match eval(sexp) {
+                          Some(sexp) => Some(cdr(&sexp)?), 
                           _ => None,
                       },
                       _ => None,
@@ -441,6 +456,7 @@ fn eval_scheme_to_string(s: &str) -> String {
 
 #[test_case("", ""; "eval: empty")]
 #[test_case("a", "a"; "eval: atom")]
+#[test_case("(", "Bad scheme!"; "eval: bad input")]
 #[test_case("()", "()"; "eval: empty list")]
 #[test_case(" ( ( a  b )   c ) ", "((a b) c)"; "eval: list with whitespace")]
 #[test_case("(car (hotdogs))", "hotdogs"; "eval: car")]
@@ -448,6 +464,15 @@ fn eval_scheme_to_string(s: &str) -> String {
 #[test_case("(car (((hotdogs))))", "((hotdogs))"; "eval: car hotdogs more nested")]
 #[test_case("(car ( ((hotdogs)) (and) (pickle) relish ) )", "((hotdogs))"; "eval: car nested list")]
 #[test_case("(car (car ( ((hotdogs)) (and) (pickle) relish ) ) )", "(hotdogs)"; "eval: nested car")]
+#[test_case("(car a)", "Bad eval!"; "eval: car of atom")]
+#[test_case("(cdr (a b c) )", "(b c)"; "eval: cdr")]
+#[test_case("(cdr ((a b c) x y z) )", "(x y z)"; "eval: cdr nested list")]
+#[test_case("(cdr (hamburger) )", "()"; "eval: cdr 1-list")]
+#[test_case("(cdr a)", "Bad eval!"; "eval: cdr of atom")]
+#[test_case("(cdr ())", "Bad eval!"; "eval: cdr of empty list")]
+#[test_case("(car (cdr ((b) (x y) ((c))) ))", "(x y)"; "eval: car cdr")]
+#[test_case("(cdr (cdr ((b) (x y) ((c))) ))", "(((c)))"; "eval: cdr cdr")]
+#[test_case("(cdr (car ((b) (x y) ((c))) ))", "()"; "eval: cdr car")]
 fn test_eval_scheme_to_string(s: &str, expected: &str) {
     assert_eq!(eval_scheme_to_string(&s), expected);
 }
