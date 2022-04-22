@@ -298,23 +298,6 @@ fn car(sexp: &SExpression) -> Option<SExpression> {
     }
 }
 
-fn cdr(sexp: &SExpression) -> Option<SExpression> {
-    match sexp {
-        SExpression::List(list) if !list.is_empty() => Some(SExpression::List(list[1..].to_vec())),
-        _ => None,
-    }
-}
-
-fn cons(atom: &SExpression, list: &SExpression) -> Option<SExpression> {
-    match list {
-        SExpression::List(list) => {
-            let mut list = list.clone();
-            list.insert(0, atom.clone());
-            Some(SExpression::List(list))
-        },
-        _ => None,
-    }
-}
 
 #[test]
 fn test_car() {
@@ -374,6 +357,30 @@ fn test_car() {
     }
 }
 
+fn cdr(sexp: &SExpression) -> Option<SExpression> {
+    match sexp {
+        SExpression::List(list) if !list.is_empty() => Some(SExpression::List(list[1..].to_vec())),
+        _ => None,
+    }
+}
+
+fn cons(atom: &SExpression, list: &SExpression) -> Option<SExpression> {
+    match list {
+        SExpression::List(list) => {
+            let mut list = list.clone();
+            list.insert(0, atom.clone());
+            Some(SExpression::List(list))
+        },
+        _ => None,
+    }
+}
+
+fn is_null(sexp: &SExpression) -> Option<SExpression> {
+    match sexp {
+        SExpression::List(list) => Some(SExpression::Atom(list.is_empty().to_string())),
+        _ => None,
+    }
+}
 impl SExpression {
     fn eval(&self) -> Option<SExpression> {
         fn eval_list(list: &Vec<SExpression>) -> Option<SExpression> {
@@ -384,6 +391,7 @@ impl SExpression {
                   SExpression::Atom(a) if a == "car" => return car(&current.next()?.eval()?),
                   SExpression::Atom(a) if a == "cdr" => return cdr(&current.next()?.eval()?),
                   SExpression::Atom(a) if a == "cons" => return cons(&current.next()?.eval()?, &current.next()?.eval()?),
+                  SExpression::Atom(a) if a == "null?" => return is_null(&current.next()?.eval()?),
                   _ => new_list.push(sexp.clone()),
               }
             }
