@@ -357,29 +357,23 @@ fn test_car() {
 }
 
 fn eval(sexp: &SExpression) -> Option<SExpression> {
-    fn eval_list(list: &Vec<SExpression>) -> Option<Vec<SExpression>> {
+    fn eval_list(list: &Vec<SExpression>) -> Option<SExpression> {
         let mut new_list : Vec<SExpression> = Vec::new();
         let mut current = list.iter();
         while let Some(sexp) = current.next() {
-          new_list.push(match sexp {
+          match sexp {
               SExpression::Atom(a) if a == "car" =>
-                  match current.next() {
-                      Some(sexp) => match car(&sexp) {
-                          Some(sexp) => sexp.clone(),
-                          _ => return None,
-                      },
-                      _ => return None,
+                  return match current.next() {
+                      Some(sexp) => Some(car(&sexp)?.clone()),
+                      _ => None,
                   },
-              _ => sexp.clone(),
-          })
+              _ => new_list.push(sexp.clone()),
+          }
         }
-        Some(new_list)
+        Some(SExpression::List(new_list))
     }
     match sexp {
-        SExpression::List(list) => match eval_list(&list) {
-            Some(list) => Some(SExpression::List(list)),
-            _ => None,
-        },
+        SExpression::List(list) => eval_list(&list),
         SExpression::Atom(s) => Some(SExpression::Atom(s.to_string())),
     }
 }
@@ -391,13 +385,7 @@ fn test_eval_car() {
         let sexp = to_sexpression(&tokens);
         match sexp {
             Some(sexp) => match eval(&sexp) {
-                Some(SExpression::List(list)) => {
-                    assert_eq!(list.len(), 1);
-                    match &list[0] {
-                        SExpression::Atom(s) => assert_eq!(s, "a"),
-                        _ => assert!(false),
-                    }
-                },
+                Some(SExpression::Atom(s)) => assert_eq!(s, "a"),
                 _ => assert!(false),
             },
             _ => assert!(false),
@@ -439,9 +427,12 @@ fn sexpression_to_string(sexp: &SExpression) -> String {
 fn eval_scheme_to_string(s: &str) -> String {
     let tokens = to_tokens(s);
     match to_sexpression(&tokens) {
-        Some(sexp) => sexpression_to_string(&sexp),
+        Some(sexp) => match eval(&sexp) {
+            Some(sexp) => sexpression_to_string(&sexp),
+            _ => String::from("Bad eval!"),
+        },
         _ if s == "" => String::new(),
-        _ => String::from("Error!"),
+        _ => String::from("Bad scheme!"),
     }
 }
 
@@ -449,6 +440,10 @@ fn eval_scheme_to_string(s: &str) -> String {
 #[test_case("a", "a"; "eval: atom")]
 #[test_case("()", "()"; "eval: empty list")]
 #[test_case(" ( ( a  b )   c ) ", "((a b) c)"; "eval: list with whitespace")]
+#[test_case("(car (hotdogs))", "hotdogs"; "eval: car")]
+#[test_case("(car ((hotdogs)))", "(hotdogs)"; "eval: car hotdogs nested")]
+#[test_case("(car (((hotdogs))))", "((hotdogs))"; "eval: car hotdogs more nested")]
+#[test_case("(car ( ((hotdogs)) (and) (pickle) relish ) )", "((hotdogs))"; "eval: car nested")]
 fn test_eval_scheme_to_string(s: &str, expected: &str) {
     assert_eq!(eval_scheme_to_string(&s), expected);
 }
