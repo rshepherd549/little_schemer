@@ -63,6 +63,13 @@ enum SExpression {
     List(Vec<SExpression>)
 }
 
+fn car(sexp: &SExpression) -> Option<&SExpression> {
+    match sexp {
+        SExpression::List(list) if !list.is_empty() => Some(&list[0]),
+        _ => None,
+    }
+}
+
 fn to_sexpression(tokens: &[Token]) -> Option<SExpression> {
 
     fn to_list(begin: std::slice::Iter<Token>) -> Option<(SExpression, std::slice::Iter<Token>)> {
@@ -288,6 +295,64 @@ fn test_is_s_exp()
     assert_eq!(is_s_exp(&to_tokens("(x y z)")), true);
     assert_eq!(is_s_exp(&to_tokens("(x y) z")), false);
     assert_eq!(is_s_exp(&to_tokens("atom atom")), false);
+}
+
+#[test]
+fn test_car() {
+    {
+        let tokens = to_tokens("hotdog");
+        let sexp = to_sexpression(&tokens);
+        match sexp {
+            Some(sexp) =>
+                assert!(match car(&sexp) {
+                    None => true,
+                    _ => false,
+                }),
+            _ => assert!(false),
+        }
+    }
+    {
+        let tokens = to_tokens("()");
+        let sexp = to_sexpression(&tokens);
+        match sexp {
+            Some(sexp) =>
+                assert!(match car(&sexp) {
+                    None => true,
+                    _ => false,
+                }),
+            _ => assert!(false),
+        }
+    }
+    {
+        let tokens = to_tokens("(a b c)");
+        let sexp = to_sexpression(&tokens);
+        match sexp {
+            Some(sexp) =>
+                match car(&sexp) {
+                    Some(SExpression::Atom(s)) => assert!(s == "a"),
+                    _ => assert!(false),
+                },
+            _ => assert!(false),
+        }
+    }
+    {
+        let tokens = to_tokens("((a b c) x y z)");
+        let sexp = to_sexpression(&tokens);
+        match sexp {
+            Some(sexp) =>
+                match car(&sexp) {
+                    Some(SExpression::List(list)) => {
+                        assert!(list.len() == 3);
+                        match &list[2] {
+                            SExpression::Atom(s) => assert!(s == "c"),
+                            _ => assert!(false),
+                        }
+                    },
+                    _ => assert!(false),
+                },
+            _ => assert!(false),
+        }
+    }
 }
 
 fn main() {
