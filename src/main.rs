@@ -60,13 +60,13 @@ fn test_to_tokens() {
 
 enum SExpression {
     Atom(String),
-    List(Vec<Box<SExpression>>)
+    List(Vec<SExpression>)
 }
 
 fn to_sexpression(tokens: &[Token]) -> Option<SExpression> {
 
     fn to_list(begin: std::slice::Iter<Token>) -> Option<(SExpression, std::slice::Iter<Token>)> {
-        let mut list: Vec<Box<SExpression>> = Vec::new();
+        let mut list: Vec<SExpression> = Vec::new();
         let mut current = begin;
         loop {
             let (sexp, next) = match current.next() {
@@ -78,7 +78,7 @@ fn to_sexpression(tokens: &[Token]) -> Option<SExpression> {
               Some(Token::CloseBracket) => return Some((SExpression::List(list), current)),
               None => break, //Ran out of tokens before finding matching CloseBracket
             };
-            list.push(Box::new(sexp));
+            list.push(sexp);
             current = next;
         }
         return None;
@@ -145,25 +145,25 @@ fn test_to_sexpression() {
         match sexp {
             Some(SExpression::List(list)) => {
                 assert!(list.len() == 2);
-                match &*list[0] {
+                match &list[0] {
                     SExpression::List(list2) => {
                         assert!(list2.len() == 3);
-                        assert!(match &*list2[0] {
+                        assert!(match &list2[0] {
                             SExpression::Atom(s) => (s == "atom"),
                             _ => false,
                         });
-                        assert!(match &*list2[1] {
+                        assert!(match &list2[1] {
                             SExpression::Atom(s) => (s == "turkey"),
                             _ => false,
                         });
-                        assert!(match &*list2[2] {
+                        assert!(match &list2[2] {
                             SExpression::Atom(s) => (s == "third"),
                             _ => false,
                         });
                     },
                     _ => assert!(false),
                 }
-                assert!(match &*list[1] {
+                assert!(match &list[1] {
                     SExpression::Atom(s) => (s == "or"),
                     _ => false,
                 });
