@@ -58,16 +58,10 @@ fn test_to_tokens() {
     }
 }
 
+#[derive(Clone)]
 enum SExpression {
     Atom(String),
     List(Vec<SExpression>)
-}
-
-fn car(sexp: &SExpression) -> Option<&SExpression> {
-    match sexp {
-        SExpression::List(list) if !list.is_empty() => Some(&list[0]),
-        _ => None,
-    }
 }
 
 fn to_sexpression(tokens: &[Token]) -> Option<SExpression> {
@@ -297,6 +291,13 @@ fn test_is_s_exp()
     assert_eq!(is_s_exp(&to_tokens("atom atom")), false);
 }
 
+fn car(sexp: &SExpression) -> Option<&SExpression> {
+    match sexp {
+        SExpression::List(list) if !list.is_empty() => Some(&list[0]),
+        _ => None,
+    }
+}
+
 #[test]
 fn test_car() {
     {
@@ -350,6 +351,58 @@ fn test_car() {
                     },
                     _ => assert!(false),
                 },
+            _ => assert!(false),
+        }
+    }
+}
+
+fn eval(sexp: &SExpression) -> Option<SExpression> {
+    fn eval_list(list: &Vec<SExpression>) -> Option<Vec<SExpression>> {
+        let mut new_list : Vec<SExpression> = Vec::new();
+        let mut current = list.iter();
+        while let Some(sexp) = current.next() {
+          new_list.push(match sexp {
+              SExpression::Atom(a) if a == "car" =>
+                  match current.next() {
+                      Some(sexp) => match car(&sexp) {
+                          Some(sexp) => sexp.clone(),
+                          _ => return None,
+                      },
+                      _ => return None,
+                  },
+              _ => sexp.clone(),
+          })
+        }
+        Some(new_list)
+    }
+    match sexp {
+        SExpression::List(list) => match eval_list(&list) {
+            Some(list) => Some(SExpression::List(list)),
+            _ => None,
+        },
+        SExpression::Atom(s) => Some(SExpression::Atom(s.to_string())),
+    }
+}
+
+#[test]
+fn test_eval_car() {
+    {
+        let tokens = to_tokens("(car (a b c))");
+        let sexp = to_sexpression(&tokens);
+        match sexp {
+            Some(sexp) => {
+                let eval_sexp = eval(&sexp);
+                match eval_sexp {
+                    Some(SExpression::List(list)) => {
+                        assert!(list.len() == 1);
+                        match &list[0] {
+                            SExpression::Atom(s) => assert!(s == "a"),
+                            _ => assert!(false),
+                        }
+                    },
+                    _ => assert!(false),
+                }
+            },
             _ => assert!(false),
         }
     }
