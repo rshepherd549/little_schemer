@@ -291,13 +291,66 @@ fn test_is_s_exp()
     assert_eq!(is_s_exp(&to_tokens("atom atom")), false);
 }
 
-fn car(sexp: &SExpression) -> Option<SExpression> {
-    match sexp {
-        SExpression::List(list) if !list.is_empty() => Some(list[0].clone()),
-        _ => None,
+impl SExpression {
+    fn car(&self) -> Option<SExpression> {
+        match &*self {
+            SExpression::List(list) if !list.is_empty() => Some(list[0].clone()),
+            _ => None,
+        }
+    }
+
+    fn cdr(&self) -> Option<SExpression> {
+        match &*self {
+            SExpression::List(list) if !list.is_empty() => Some(SExpression::List(list[1..].to_vec())),
+            _ => None,
+        }
+    }
+    
+    fn cons(&self, list: &SExpression) -> Option<SExpression> {
+        match list {
+            SExpression::List(list) => {
+                let mut list = list.clone();
+                list.insert(0, self.clone());
+                Some(SExpression::List(list))
+            },
+            _ => None,
+        }
+    }
+    
+    fn is_null(&self) -> Option<SExpression> {
+        match &*self {
+            SExpression::List(list) => Some(SExpression::Atom(list.is_empty().to_string())),
+            _ => None,
+        }
+    }
+    
+    //`quote` returns the following parameter without evaluation
+    fn quote(&self) -> Option<SExpression> {
+        Some(self.clone())
+    }
+
+    fn eval(&self) -> Option<SExpression> {
+        fn eval_list(list: &Vec<SExpression>) -> Option<SExpression> {
+            let mut new_list : Vec<SExpression> = Vec::new();
+            let mut current = list.iter();
+            while let Some(sexp) = current.next() {
+              match sexp {
+                  SExpression::Atom(a) if a == "car" => return current.next()?.eval()?.car(),
+                  SExpression::Atom(a) if a == "cdr" => return current.next()?.eval()?.cdr(),
+                  SExpression::Atom(a) if a == "cons" => return current.next()?.eval()?.cons(&current.next()?.eval()?),
+                  SExpression::Atom(a) if a == "null?" => return current.next()?.eval()?.is_null(),
+                  SExpression::Atom(a) if a == "quote" || a == "'" => return current.next()?.quote(),
+                  _ => new_list.push(sexp.clone()),
+              }
+            }
+            Some(SExpression::List(new_list))
+        }
+        match &*self {
+            SExpression::List(list) => eval_list(&list),
+            SExpression::Atom(s) => Some(SExpression::Atom(s.to_string())),
+        }
     }
 }
-
 
 #[test]
 fn test_car() {
@@ -306,7 +359,7 @@ fn test_car() {
         let sexp = to_sexpression(&tokens);
         match sexp {
             Some(sexp) =>
-                assert!(match car(&sexp) {
+                assert!(match sexp.car() {
                     None => true,
                     _ => false,
                 }),
@@ -318,7 +371,7 @@ fn test_car() {
         let sexp = to_sexpression(&tokens);
         match sexp {
             Some(sexp) =>
-                assert!(match car(&sexp) {
+                assert!(match sexp.car() {
                     None => true,
                     _ => false,
                 }),
@@ -330,7 +383,7 @@ fn test_car() {
         let sexp = to_sexpression(&tokens);
         match sexp {
             Some(sexp) =>
-                match car(&sexp) {
+                match sexp.car() {
                     Some(SExpression::Atom(s)) => assert_eq!(s,"a"),
                     _ => assert!(false),
                 },
@@ -342,7 +395,7 @@ fn test_car() {
         let sexp = to_sexpression(&tokens);
         match sexp {
             Some(sexp) =>
-                match car(&sexp) {
+                match sexp.car() {
                     Some(SExpression::List(list)) => {
                         assert_eq!(list.len(), 3);
                         match &list[2] {
@@ -353,60 +406,6 @@ fn test_car() {
                     _ => assert!(false),
                 },
             _ => assert!(false),
-        }
-    }
-}
-
-fn cdr(sexp: &SExpression) -> Option<SExpression> {
-    match sexp {
-        SExpression::List(list) if !list.is_empty() => Some(SExpression::List(list[1..].to_vec())),
-        _ => None,
-    }
-}
-
-fn cons(atom: &SExpression, list: &SExpression) -> Option<SExpression> {
-    match list {
-        SExpression::List(list) => {
-            let mut list = list.clone();
-            list.insert(0, atom.clone());
-            Some(SExpression::List(list))
-        },
-        _ => None,
-    }
-}
-
-fn is_null(sexp: &SExpression) -> Option<SExpression> {
-    match sexp {
-        SExpression::List(list) => Some(SExpression::Atom(list.is_empty().to_string())),
-        _ => None,
-    }
-}
-
-//`quote` returns the following parameter without evaluation
-fn quote(sexp: &SExpression) -> Option<SExpression> {
-    Some(sexp.clone())
-}
-
-impl SExpression {
-    fn eval(&self) -> Option<SExpression> {
-        fn eval_list(list: &Vec<SExpression>) -> Option<SExpression> {
-            let mut new_list : Vec<SExpression> = Vec::new();
-            let mut current = list.iter();
-            while let Some(sexp) = current.next() {
-              match sexp {
-                  SExpression::Atom(a) if a == "car" => return car(&current.next()?.eval()?),
-                  SExpression::Atom(a) if a == "cdr" => return cdr(&current.next()?.eval()?),
-                  SExpression::Atom(a) if a == "cons" => return cons(&current.next()?.eval()?, &current.next()?.eval()?),
-                  SExpression::Atom(a) if a == "null?" => return is_null(&current.next()?.eval()?),
-                  SExpression::Atom(a) if a == "quote" => return quote(current.next()?),
-                  _ => new_list.push(sexp.clone()),
-              }
-            }
-            Some(SExpression::List(new_list))
-        }
-        match &*self {
-            SExpression::List(list) => eval_list(&list),
-            SExpression::Atom(s) => Some(SExpression::Atom(s.to_string())),
         }
     }
 }
@@ -496,6 +495,7 @@ fn eval_scheme_to_string(s: &str) -> String {
 #[test_case("(null? (()))", "false"; "eval: null? non-empty list")]
 #[test_case("(null? (car (())))", "true"; "eval: null? car non-empty list")]
 #[test_case("(quote ())", "()"; "eval: quote")]
+#[test_case("('())", "()"; "eval: quote apostrophe")]
 fn test_eval_scheme_to_string(s: &str, expected: &str) {
     assert_eq!(eval_scheme_to_string(&s), expected);
 }

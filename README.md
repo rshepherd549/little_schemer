@@ -48,7 +48,11 @@ Crude state machine: loop over chars with mutable flags
 - Better tool for analyzing the atoms and lists.
 - Still using mutable state
 
+Enum: can't use an individual enum value as a type even though it can have varying state e.g. fnc(SExpression) -> SExpression::List
+
 Consider making functions return nil or () instead of None - removing a layer of Option.
+- General idea that an additional enum value could replace wrapping the enum in an option, but then uses are forced to test Nil everytime i.e. can't use types to enforce initialized.
+
 Consider relaxing errors from excess parameters. Just ignore them.
 
 Consider replacing Vec in list with a linked list (head+body).
