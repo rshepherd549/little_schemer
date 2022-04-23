@@ -336,6 +336,25 @@ impl SExpression {
         }))
     }
     
+    fn is_eq(&self, other: &SExpression) -> SExpression {
+        fn is_eq_(lhs: &SExpression, rhs: &SExpression) -> bool {
+            match lhs {
+                SExpression::Atom(lhs) => match rhs {
+                    SExpression::Atom(rhs) => (lhs == rhs),
+                    _ => false,
+                },
+                SExpression::List(lhs) => match rhs {
+                    SExpression::List(rhs) =>
+                         (lhs.len() == rhs.len()) &&
+                         lhs.iter().zip(rhs).any(|(lhs,rhs)|is_eq_(&lhs,&rhs)),
+                    _ => false,
+                },
+            }
+        }
+
+        SExpression::Atom(is_eq_(self, other).to_string())
+    }
+    
     fn eval(&self) -> Option<SExpression> {
         fn eval_list(list: &Vec<SExpression>) -> Option<SExpression> {
             let mut new_list : Vec<SExpression> = Vec::new();
@@ -348,6 +367,7 @@ impl SExpression {
                   SExpression::Atom(a) if a == "null?" => return Some(current.next()?.eval()?.is_null()),
                   SExpression::Atom(a) if a == "quote" || a == "'" => return current.next()?.quote(),
                   SExpression::Atom(a) if a == "atom?" => return Some(current.next()?.eval()?.is_atom()),
+                  SExpression::Atom(a) if a == "eq?" => return Some(current.next()?.eval()?.is_eq(&current.next()?.eval()?)),
                   _ => new_list.push(sexp.clone()),
               }
             }
@@ -513,6 +533,16 @@ fn eval_scheme_to_string(s: &str) -> String {
 #[test_case("(atom? (cdr (Harry)))", "false"; "eval: atom? cdr 1-list")]
 #[test_case("(atom? (car (cdr (swing low sweet cherry oat))))", "true"; "eval: atom? car cdr list")]
 #[test_case("(atom? (car (cdr (swing (low sweet) cherry oat))))", "false"; "eval: atom? car cdr list of list")]
+#[test_case("(eq? Harry Harry)", "true"; "eval: eq? same atoms")]
+#[test_case("(eq? margarine butter)", "false"; "eval: eq? different atoms")]
+#[test_case("(eq? () (strawberry))", "false"; "eval: eq? different lists")]
+#[test_case("(eq? (strawberry tea) (strawberry tea))", "true"; "eval: eq? same lists")]
+#[test_case("(eq? 6 7)", "false"; "eval: eq? different numbers")]
+#[test_case("(eq? 7 7)", "true"; "eval: eq? same numbers")]
+#[test_case("(eq? (car (Mary had a little lamb)) Mary)", "true"; "eval: eq? car")]
+#[test_case("(eq? (cdr (soured milk)) milk)", "false"; "eval: eq? cdr list and atom")]
+#[test_case("(eq? (cdr (soured milk)) (milk))", "true"; "eval: eq? cdr list and list")]
+#[test_case("(eq? (car (beans beans we need jelly beans)) (car (cdr (beans beans we need jelly beans))) )", "true"; "eval: eq? 1st 2nd")]
 fn test_eval_scheme_to_string(s: &str, expected: &str) {
     assert_eq!(eval_scheme_to_string(&s), expected);
 }

@@ -66,3 +66,27 @@ Adding new functions is becoming a pattern of coding the implementation and codi
 Starting to think about defining new functions inside scheme rather than outside.
 Ultimate aim: what is the most minimal rust implementation?
 - could it be a macro implementation of a DSL version?
+
+```rust
+        if let SExpression::Atom(s_self) = self &&
+            let SExpression::Atom(s_other) = other &&
+            s_self == s_other {
+                return SExpression::Atom(String::from("true"))
+            }
+```
+`let` expressions in this position are experimental
+
+```rust
+        SExpression::Atom( ( {
+            if let SExpression::Atom(s_self) = self {
+                if let SExpression::Atom(s_other) = other {
+                    s_self == s_other
+                }
+            }
+            false
+        }).to_string())
+```
+illegal
+
+It would be nice to describe eq?(list list) within scheme.
+But nice excuse to try iterate functions.
