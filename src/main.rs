@@ -318,10 +318,10 @@ impl SExpression {
     }
     
     fn is_null(&self) -> SExpression {
-        match &*self {
-            SExpression::List(list) => SExpression::Atom(list.is_empty().to_string()),
-            _ => SExpression::Atom(String::from("false")),
-        }
+        SExpression::Atom(match &*self {
+            SExpression::List(list) => list.is_empty().to_string(),
+            _ => String::from("false"),
+        })
     }
     
     //`quote` returns the following parameter without evaluation
@@ -329,6 +329,13 @@ impl SExpression {
         Some(self.clone())
     }
 
+    fn is_atom(&self) -> SExpression {
+        SExpression::Atom(String::from(match &*self {
+            SExpression::Atom(_) => "true",
+            _ => "false",
+        }))
+    }
+    
     fn eval(&self) -> Option<SExpression> {
         fn eval_list(list: &Vec<SExpression>) -> Option<SExpression> {
             let mut new_list : Vec<SExpression> = Vec::new();
@@ -340,6 +347,7 @@ impl SExpression {
                   SExpression::Atom(a) if a == "cons" => return current.next()?.eval()?.cons(&current.next()?.eval()?),
                   SExpression::Atom(a) if a == "null?" => return Some(current.next()?.eval()?.is_null()),
                   SExpression::Atom(a) if a == "quote" || a == "'" => return current.next()?.quote(),
+                  SExpression::Atom(a) if a == "atom?" => return Some(current.next()?.eval()?.is_atom()),
                   _ => new_list.push(sexp.clone()),
               }
             }
@@ -497,6 +505,14 @@ fn eval_scheme_to_string(s: &str) -> String {
 #[test_case("(quote ())", "()"; "eval: quote")]
 #[test_case("('())", "()"; "eval: quote apostrophe")]
 #[test_case("(null? (a b c))", "false"; "eval: null? list")]
+#[test_case("(atom? Harry)", "true"; "eval: atom? atom")]
+#[test_case("(atom? (Harry had a heap of apples))", "false"; "eval: atom? list")]
+#[test_case("(atom? ())", "false"; "eval: atom? empty list")]
+#[test_case("(atom? (car (Harry had a heap of apples)))", "true"; "eval: atom? car list")]
+#[test_case("(atom? (cdr (Harry had a heap of apples)))", "false"; "eval: atom? cdr list")]
+#[test_case("(atom? (cdr (Harry)))", "false"; "eval: atom? cdr 1-list")]
+#[test_case("(atom? (car (cdr (swing low sweet cherry oat))))", "true"; "eval: atom? car cdr list")]
+#[test_case("(atom? (car (cdr (swing (low sweet) cherry oat))))", "false"; "eval: atom? car cdr list of list")]
 fn test_eval_scheme_to_string(s: &str, expected: &str) {
     assert_eq!(eval_scheme_to_string(&s), expected);
 }

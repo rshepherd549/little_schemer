@@ -52,6 +52,7 @@ Enum: can't use an individual enum value as a type even though it can have varyi
 
 Consider making functions return nil or () instead of None - removing a layer of Option.
 - General idea that an additional enum value could replace wrapping the enum in an option, but then uses are forced to test Nil everytime i.e. can't use types to enforce initialized.
+- but if everything receives and returns Option then might as well remove the extra layer? But then can't take advantage of ?
 
 Consider relaxing errors from excess parameters. Just ignore them.
 
