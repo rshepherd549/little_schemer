@@ -317,10 +317,10 @@ impl SExpression {
         }
     }
     
-    fn is_null(&self) -> Option<SExpression> {
+    fn is_null(&self) -> SExpression {
         match &*self {
-            SExpression::List(list) => Some(SExpression::Atom(list.is_empty().to_string())),
-            _ => None,
+            SExpression::List(list) => SExpression::Atom(list.is_empty().to_string()),
+            _ => SExpression::Atom(String::from("false")),
         }
     }
     
@@ -338,7 +338,7 @@ impl SExpression {
                   SExpression::Atom(a) if a == "car" => return current.next()?.eval()?.car(),
                   SExpression::Atom(a) if a == "cdr" => return current.next()?.eval()?.cdr(),
                   SExpression::Atom(a) if a == "cons" => return current.next()?.eval()?.cons(&current.next()?.eval()?),
-                  SExpression::Atom(a) if a == "null?" => return current.next()?.eval()?.is_null(),
+                  SExpression::Atom(a) if a == "null?" => return Some(current.next()?.eval()?.is_null()),
                   SExpression::Atom(a) if a == "quote" || a == "'" => return current.next()?.quote(),
                   _ => new_list.push(sexp.clone()),
               }
@@ -490,12 +490,13 @@ fn eval_scheme_to_string(s: &str) -> String {
 #[test_case("(cons peanut ())", "(peanut)"; "eval: cons into empty list")]
 #[test_case("(cons () ())", "(())"; "eval: cons empty list into empty list")]
 #[test_case("(cons peanut (butter and jelly))", "(peanut butter and jelly)"; "eval: cons")]
-#[test_case("(null? spaghetti)", "Bad eval!"; "eval: null? atom")]
+#[test_case("(null? spaghetti)", "false"; "eval: null? atom")]
 #[test_case("(null? ())", "true"; "eval: null? empty list")]
 #[test_case("(null? (()))", "false"; "eval: null? non-empty list")]
 #[test_case("(null? (car (())))", "true"; "eval: null? car non-empty list")]
 #[test_case("(quote ())", "()"; "eval: quote")]
 #[test_case("('())", "()"; "eval: quote apostrophe")]
+#[test_case("(null? (a b c))", "false"; "eval: null? list")]
 fn test_eval_scheme_to_string(s: &str, expected: &str) {
     assert_eq!(eval_scheme_to_string(&s), expected);
 }
