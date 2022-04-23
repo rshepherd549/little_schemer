@@ -381,6 +381,12 @@ fn is_null(sexp: &SExpression) -> Option<SExpression> {
         _ => None,
     }
 }
+
+//`quote` returns the following parameter without evaluation
+fn quote(sexp: &SExpression) -> Option<SExpression> {
+    Some(sexp.clone())
+}
+
 impl SExpression {
     fn eval(&self) -> Option<SExpression> {
         fn eval_list(list: &Vec<SExpression>) -> Option<SExpression> {
@@ -392,6 +398,7 @@ impl SExpression {
                   SExpression::Atom(a) if a == "cdr" => return cdr(&current.next()?.eval()?),
                   SExpression::Atom(a) if a == "cons" => return cons(&current.next()?.eval()?, &current.next()?.eval()?),
                   SExpression::Atom(a) if a == "null?" => return is_null(&current.next()?.eval()?),
+                  SExpression::Atom(a) if a == "quote" => return quote(current.next()?),
                   _ => new_list.push(sexp.clone()),
               }
             }
@@ -484,6 +491,11 @@ fn eval_scheme_to_string(s: &str) -> String {
 #[test_case("(cons peanut ())", "(peanut)"; "eval: cons into empty list")]
 #[test_case("(cons () ())", "(())"; "eval: cons empty list into empty list")]
 #[test_case("(cons peanut (butter and jelly))", "(peanut butter and jelly)"; "eval: cons")]
+#[test_case("(null? spaghetti)", "Bad eval!"; "eval: null? atom")]
+#[test_case("(null? ())", "true"; "eval: null? empty list")]
+#[test_case("(null? (()))", "false"; "eval: null? non-empty list")]
+#[test_case("(null? (car (())))", "true"; "eval: null? car non-empty list")]
+#[test_case("(quote ())", "()"; "eval: quote")]
 fn test_eval_scheme_to_string(s: &str, expected: &str) {
     assert_eq!(eval_scheme_to_string(&s), expected);
 }

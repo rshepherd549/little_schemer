@@ -48,5 +48,16 @@ Crude state machine: loop over chars with mutable flags
 - Better tool for analyzing the atoms and lists.
 - Still using mutable state
 
+Consider making functions return nil or () instead of None - removing a layer of Option.
+Consider relaxing errors from excess parameters. Just ignore them.
 
+Consider replacing Vec in list with a linked list (head+body).
+This might then allow all strings from the original string to be used by reference.
+Good test of Rust helping us manage reference safely?
 
+Adding new functions is becoming a pattern of coding the implementation and coding the parsing redirection.
+- If many more then then consider adding structure to enforce name, parameters, lookup.
+
+Starting to think about defining new functions inside scheme rather than outside.
+Ultimate aim: what is the most minimal rust implementation?
+- could it be a macro implementation of a DSL version?
