@@ -329,11 +329,15 @@ impl SExpression {
         Some(self.clone())
     }
 
+    fn is_atom_(&self) -> bool {
+        match &*self {
+            SExpression::Atom(_) => true,
+            _ => false,
+        }
+    }
+    
     fn is_atom(&self) -> SExpression {
-        SExpression::Atom(String::from(match &*self {
-            SExpression::Atom(_) => "true",
-            _ => "false",
-        }))
+        SExpression::Atom(self.is_atom_().to_string())
     }
     
     fn is_eq(&self, other: &SExpression) -> SExpression {
@@ -354,6 +358,13 @@ impl SExpression {
 
         SExpression::Atom(is_eq_(self, other).to_string())
     }
+
+    fn is_lat(&self) -> SExpression {
+        SExpression::Atom((match &*self {
+            SExpression::Atom(_) => false,
+            SExpression::List(list) => list.iter().all(|s|s.is_atom_()),
+        }).to_string())
+    }
     
     fn eval(&self) -> Option<SExpression> {
         fn eval_list(list: &Vec<SExpression>) -> Option<SExpression> {
@@ -368,6 +379,7 @@ impl SExpression {
                   SExpression::Atom(a) if a == "quote" || a == "'" => return current.next()?.quote(),
                   SExpression::Atom(a) if a == "atom?" => return Some(current.next()?.eval()?.is_atom()),
                   SExpression::Atom(a) if a == "eq?" => return Some(current.next()?.eval()?.is_eq(&current.next()?.eval()?)),
+                  SExpression::Atom(a) if a == "lat?" => return Some(current.next()?.eval()?.is_lat()),
                   _ => new_list.push(sexp.clone()),
               }
             }
@@ -543,6 +555,10 @@ fn eval_scheme_to_string(s: &str) -> String {
 #[test_case("(eq? (cdr (soured milk)) milk)", "false"; "eval: eq? cdr list and atom")]
 #[test_case("(eq? (cdr (soured milk)) (milk))", "true"; "eval: eq? cdr list and list")]
 #[test_case("(eq? (car (beans beans we need jelly beans)) (car (cdr (beans beans we need jelly beans))) )", "true"; "eval: eq? 1st 2nd")]
+#[test_case("(lat? (Jack Sprat could eat no chicken fat) )", "true"; "eval: lat? list of atoms")]
+#[test_case("(lat? ((Jack) Sprat could eat no chicken fat) )", "false"; "eval: lat? list including list")]
+#[test_case("(lat? (Jack (Sprat could) eat no chicken fat) )", "false"; "eval: lat? another list including list")]
+#[test_case("(lat? () )", "true"; "eval: lat? empty list")]
 fn test_eval_scheme_to_string(s: &str, expected: &str) {
     assert_eq!(eval_scheme_to_string(&s), expected);
 }
