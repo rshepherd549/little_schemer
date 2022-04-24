@@ -100,3 +100,26 @@ Would be nice if compiler errors in output showed the top.
 
 No examples of multiple statements making use of definitions
 
+What should define return?
+- lisp and scheme references say its a control structure and not an expression
+- but in recursive evaluation everything returns something or fails with None
+  - maybe relax this so that None doesn't contribute to the list but continues with the next element?
+- return name of thing defined for initial experiements
+
+Interesting:
+```
+        SExpression::Atom(_) => match sexp.eval(env) {
+            Some(SExpression::Atom(s_)) => s += &s_,
+            Some(sexp) => s += &sexpression_to_string(&sexp, env),
+            _ => (),
+        },
+```
+Difficulty returning empty string
+
+Difficulty accessing a hash map and then using it:
+```
+            SExpression::Atom(s) => match env.get(s) {
+                Some(sexp) => sexp.eval(env),
+                _ => Some(self.clone()),
+            },
+```
