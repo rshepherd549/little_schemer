@@ -365,7 +365,30 @@ impl SExpression {
             SExpression::List(list) => list.iter().all(|s|s.is_atom_()),
         }).to_string())
     }
+
+    fn is_true(&self) -> bool {
+        match &*self {
+            SExpression::Atom(s) => (s == "true" || s == "else"),
+            _ => false,
+        }
+    }
     
+    fn cond(&self, conditions: & mut std::slice::Iter<SExpression>) -> Option<SExpression> {
+        let applicable_condition = conditions.find(|&condition| {
+            match condition {
+                SExpression::List(condition) if condition.len() > 1 => match condition[0].eval() {
+                    Some(condition) => condition.is_true(),
+                    _ => false,
+                },
+                _ => false,
+            }
+        });
+        match applicable_condition {
+            Some(SExpression::List(condition)) => condition[1].eval(),
+            _ => None,
+        }
+    }
+
     fn eval(&self) -> Option<SExpression> {
         fn eval_list(list: &Vec<SExpression>) -> Option<SExpression> {
             let mut new_list : Vec<SExpression> = Vec::new();
@@ -380,6 +403,7 @@ impl SExpression {
                   SExpression::Atom(a) if a == "atom?" => return Some(current.next()?.eval()?.is_atom()),
                   SExpression::Atom(a) if a == "eq?" => return Some(current.next()?.eval()?.is_eq(&current.next()?.eval()?)),
                   SExpression::Atom(a) if a == "lat?" => return Some(current.next()?.eval()?.is_lat()),
+                  SExpression::Atom(a) if a == "cond" => return sexp.cond(& mut current),
                   _ => new_list.push(sexp.clone()),
               }
             }
@@ -559,6 +583,13 @@ fn eval_scheme_to_string(s: &str) -> String {
 #[test_case("(lat? ((Jack) Sprat could eat no chicken fat) )", "false"; "eval: lat? list including list")]
 #[test_case("(lat? (Jack (Sprat could) eat no chicken fat) )", "false"; "eval: lat? another list including list")]
 #[test_case("(lat? () )", "true"; "eval: lat? empty list")]
+#[test_case("(cond (true a) )", "a"; "eval: cond true")]
+#[test_case("(cond (false a) (true b) )", "b"; "eval: cond false true")]
+#[test_case("(cond (true a) (true b) )", "a"; "eval: cond first result")]
+#[test_case("(cond (false a) )", "Bad eval!"; "eval: cond no result")]
+#[test_case("(cond ((eq? a a) equal) (true not-equal) )", "equal"; "eval: cond apply eq? to same")]
+#[test_case("(cond ((eq? a b) equal) (true not-equal) )", "not-equal"; "eval: cond apply eq? to different")]
+#[test_case("(cond ((eq? a b) equal) (else not-equal) )", "not-equal"; "eval: cond use else")]
 fn test_eval_scheme_to_string(s: &str, expected: &str) {
     assert_eq!(eval_scheme_to_string(&s), expected);
 }
