@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 #[derive(Debug)]
 #[derive(PartialEq)]
 enum Token {
@@ -291,6 +293,8 @@ fn test_is_s_exp()
     assert_eq!(is_s_exp(&to_tokens("atom atom")), false);
 }
 
+type Environment = HashMap<String, SExpression>;
+
 impl SExpression {
     fn car(&self) -> Option<SExpression> {
         match &*self {
@@ -373,10 +377,10 @@ impl SExpression {
         }
     }
     
-    fn cond(&self, conditions: & mut std::slice::Iter<SExpression>) -> Option<SExpression> {
+    fn cond(&self, conditions: &mut std::slice::Iter<SExpression>, env: &mut Environment) -> Option<SExpression> {
         let applicable_condition = conditions.find(|&condition| {
             match condition {
-                SExpression::List(condition) if condition.len() > 1 => match condition[0].eval() {
+                SExpression::List(condition) if condition.len() > 1 => match condition[0].eval(env) {
                     Some(condition) => condition.is_true(),
                     _ => false,
                 },
@@ -384,33 +388,33 @@ impl SExpression {
             }
         });
         match applicable_condition {
-            Some(SExpression::List(condition)) => condition[1].eval(),
+            Some(SExpression::List(condition)) => condition[1].eval(env),
             _ => None,
         }
     }
 
-    fn eval(&self) -> Option<SExpression> {
-        fn eval_list(list: &Vec<SExpression>) -> Option<SExpression> {
+    fn eval(&self, env: &mut Environment) -> Option<SExpression> {
+        fn eval_list(list: &Vec<SExpression>, env: &mut Environment) -> Option<SExpression> {
             let mut new_list : Vec<SExpression> = Vec::new();
             let mut current = list.iter();
             while let Some(sexp) = current.next() {
               match sexp {
-                  SExpression::Atom(a) if a == "car" => return current.next()?.eval()?.car(),
-                  SExpression::Atom(a) if a == "cdr" => return current.next()?.eval()?.cdr(),
-                  SExpression::Atom(a) if a == "cons" => return current.next()?.eval()?.cons(&current.next()?.eval()?),
-                  SExpression::Atom(a) if a == "null?" => return Some(current.next()?.eval()?.is_null()),
+                  SExpression::Atom(a) if a == "car" => return current.next()?.eval(env)?.car(),
+                  SExpression::Atom(a) if a == "cdr" => return current.next()?.eval(env)?.cdr(),
+                  SExpression::Atom(a) if a == "cons" => return current.next()?.eval(env)?.cons(&current.next()?.eval(env)?),
+                  SExpression::Atom(a) if a == "null?" => return Some(current.next()?.eval(env)?.is_null()),
                   SExpression::Atom(a) if a == "quote" || a == "'" => return current.next()?.quote(),
-                  SExpression::Atom(a) if a == "atom?" => return Some(current.next()?.eval()?.is_atom()),
-                  SExpression::Atom(a) if a == "eq?" => return Some(current.next()?.eval()?.is_eq(&current.next()?.eval()?)),
-                  SExpression::Atom(a) if a == "lat?" => return Some(current.next()?.eval()?.is_lat()),
-                  SExpression::Atom(a) if a == "cond" => return sexp.cond(& mut current),
+                  SExpression::Atom(a) if a == "atom?" => return Some(current.next()?.eval(env)?.is_atom()),
+                  SExpression::Atom(a) if a == "eq?" => return Some(current.next()?.eval(env)?.is_eq(&current.next()?.eval(env)?)),
+                  SExpression::Atom(a) if a == "lat?" => return Some(current.next()?.eval(env)?.is_lat()),
+                  SExpression::Atom(a) if a == "cond" => return sexp.cond(&mut current, env),
                   _ => new_list.push(sexp.clone()),
               }
             }
             Some(SExpression::List(new_list))
         }
         match &*self {
-            SExpression::List(list) => eval_list(&list),
+            SExpression::List(list) => eval_list(&list, env),
             SExpression::Atom(s) => Some(SExpression::Atom(s.to_string())),
         }
     }
@@ -476,11 +480,12 @@ fn test_car() {
 
 #[test]
 fn test_eval_car() {
+    let mut env = Environment::new();
     {
         let tokens = to_tokens("(car (a b c))");
         let sexp = to_sexpression(&tokens);
         match sexp {
-            Some(sexp) => match sexp.eval() {
+            Some(sexp) => match sexp.eval(&mut env) {
                 Some(SExpression::Atom(s)) => assert_eq!(s, "a"),
                 _ => assert!(false),
             },
@@ -491,7 +496,7 @@ fn test_eval_car() {
         let tokens = to_tokens("(car a)");
         let sexp = to_sexpression(&tokens);
         match sexp {
-            Some(sexp) => assert!(match sexp.eval() {
+            Some(sexp) => assert!(match sexp.eval(&mut env) {
                 None => true,
                 _ => false,
             }),
@@ -522,8 +527,9 @@ fn sexpression_to_string(sexp: &SExpression) -> String {
 
 fn eval_scheme_to_string(s: &str) -> String {
     let tokens = to_tokens(s);
+    let mut env = Environment::new();
     match to_sexpression(&tokens) {
-        Some(sexp) => match sexp.eval() {
+        Some(sexp) => match sexp.eval(&mut env) {
             Some(sexp) => sexpression_to_string(&sexp),
             _ => String::from("Bad eval!"),
         },

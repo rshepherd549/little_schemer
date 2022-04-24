@@ -95,3 +95,8 @@ Adding cond(): passing the iterator in for parameters was nice.
 - Would this be better for the other functions, rather than the eval layer extracting the parameters when the number is known?
 
 It definitely feels like we should be able to define `else` equivalent to `true` inside scheme.
+
+Would be nice if compiler errors in output showed the top.
+
+No examples of multiple statements making use of definitions
+
