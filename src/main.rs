@@ -393,13 +393,10 @@ impl SExpression {
         }
     }
 
-    fn define(&self, other: &SExpression, env: &mut Environment) -> Option<SExpression> {
+    fn define(&self, other: &SExpression, env: &mut Environment) {
         match *&self {
-            SExpression::Atom(s) => {
-                env.insert(s.to_string(), other.clone());
-                Some(SExpression::Atom(s.clone()))
-            },
-            _ => None,
+            SExpression::Atom(s) => {env.insert(s.to_string(), other.clone()); ()},
+            _ => (),
         }
     }
 
@@ -418,8 +415,11 @@ impl SExpression {
                   SExpression::Atom(a) if a == "eq?" => return Some(current.next()?.eval(env)?.is_eq(&current.next()?.eval(env)?)),
                   SExpression::Atom(a) if a == "lat?" => return Some(current.next()?.eval(env)?.is_lat()),
                   SExpression::Atom(a) if a == "cond" => return sexp.cond(&mut current, env),
-                  SExpression::Atom(a) if a == "define" => return current.next()?.eval(env)?.define(&current.next()?.eval(env)?, env),
-                  _ => new_list.push(sexp.clone()),
+                  SExpression::Atom(a) if a == "define" => current.next()?.eval(env)?.define(&current.next()?.eval(env)?, env),
+                  _ => match sexp.eval(env) {
+                      Some(sexp) => new_list.push(sexp),
+                      _ => (),
+                  },
               }
             }
             Some(SExpression::List(new_list))
@@ -617,10 +617,10 @@ fn eval_scheme_to_string(s: &str) -> String {
 #[test_case("(cond (false a) )", "Bad eval!"; "eval: cond no result")]
 #[test_case("(cond ((eq? a a) equal) (true not-equal) )", "equal"; "eval: cond apply eq? to same")]
 #[test_case("(cond ((eq? a b) equal) (true not-equal) )", "not-equal"; "eval: cond apply eq? to different")]
-#[test_case("((define else true) (cond ((eq? a b) equal) (else not-equal)) )", "true not-equal"; "eval: cond use else")]
-#[test_case("(define a b)", "b"; "eval: define isolated")]
+#[test_case("((define else true) (cond ((eq? a b) equal) (else not-equal)) )", "(() not-equal)"; "eval: cond use else")]
+#[test_case("(define a b)", "()"; "eval: define isolated")]
 #[test_case("( (eq? a b) (eq? c c))", "(false true)"; "eval: multiple expressions")]
-#[test_case("( (define a b) a)", "(b b)"; "eval: define substitute definition")]
+#[test_case("( (define a b) a)", "(() b)"; "eval: define substitute definition")]
 fn test_eval_scheme_to_string(s: &str, expected: &str) {
     assert_eq!(eval_scheme_to_string(&s), expected);
 }

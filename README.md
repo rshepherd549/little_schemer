@@ -123,3 +123,18 @@ Difficulty accessing a hash map and then using it:
                 _ => Some(self.clone()),
             },
 ```
+Rather than maintaining our own Environment, could we just use Rust's closures? Store them?
+
+Numerous problems with our Environment:
+- likely to blow up for any cyclic lookup
+- not scoped (allowing overrides and overlong lifetimes)
+- direct replacement: not taking account of symbols meaning different things in different scopes
+  - maybe only relevant inside lambdas?
+- significant cloning going on
+- need to better handle define not returning a value
+
+If we're starting to use longer scripts, would it be better to have the test functions inside scheme?
+Could build them within scheme, if we had an output function to deliver info?
+But we already do have that, so maybe overthinking?
+
+Lambdas are the big remaining challenge
