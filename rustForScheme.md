@@ -11,13 +11,10 @@ marp: true
 ---
 
 # My industrial experience
+- C++, Java, C, Fortran, Actor, Modula 2
 
-- C++
-- Java
-- C
-- Fortran
-- Modula 2
-- Actor
+# My experimental experience
+- Rust, F#, Pascal, Apl, Forth, Basic
 
 ---
 
@@ -27,13 +24,13 @@ Plenty of reading, discussing and exploring
 
 - JSP
 - OOP
-- XP & TDD
+- XP & TDD & DDD
 - Lambda calculus
 - Rust
 
 ---
 
-<!-- Increasingly more other approaches to programming and design -->
+<!-- Increasingly interesting in other approaches to programming and design -->
 
 # Structure and Interpretation of Computer Programs
 ## Abelson, Sussman and Sussman
@@ -61,11 +58,12 @@ Plenty of reading, discussing and exploring
 
 At the same time I heard about
 
-# The Little Lisper
-# The Little Schemer
+# The Little Lisper/Schemer
 ## Friedman and Felleisen
 
 ![](./images/littleSchemerCoverSmall.jpg)
+
+<!-- Apologies for jumping between lisp and scheme. I don't know enough to know the distinction yet!-->
 
 <!-- The highly recommended 'The Little Schemer' book turned out to be a very Socratic tutorial, comprised entirely of questions, allowing the reader to progressively build up their understanding -->
 
@@ -269,7 +267,7 @@ This works for simple examples:
 - but not for nested lists
 - is a very manual, procedural approach
 
-What would it look like if we used more of the Rust language tp help enforce concepts?
+What would it look like if we used more of the Rust language to help enforce concepts?
 
 - separate text parsing from the understanding
 - use types to represent the different concepts
